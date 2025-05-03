@@ -94,7 +94,13 @@ class GroupByAdminMixin:
         for field in groupby_fields:
             if field not in self.group_by_fields:
                 return super().changelist_view(request, extra_context)
-
+        
+        # Make a mutable copy of request.GET and remove 'sort' parameter to avoid 
+        # Django trying to use it as a filtering parameter
+        request_copy = request.GET.copy()
+        sort_param = request_copy.pop('sort', [''])[0]
+        request.GET = request_copy
+        
         cl = self.get_changelist_instance(request)
         queryset = cl.get_queryset(request)
         
@@ -103,7 +109,32 @@ class GroupByAdminMixin:
             for op_name, op_func in operations.items():
                 flat_aggregates[f"{field}__{op_name}"] = op_func
         
-        grouped_qs = queryset.values(*groupby_fields).annotate(**flat_aggregates).order_by(*groupby_fields)
+        # Handle sorting for aggregates
+        sort_order = []
+        sort_field = None
+        sort_direction = ''
+        
+        if sort_param:
+            desc = False
+            if sort_param.startswith('-'):
+                desc = True
+                sort_param = sort_param[1:]
+                
+            for field, operations in self.group_by_aggregates.items():
+                for op_name in operations.keys():
+                    agg_key = f"{field}__{op_name}"
+                    if sort_param == agg_key:
+                        sort_field = agg_key
+                        sort_direction = 'descending' if desc else 'ascending'
+                        sort_order = [f"{'-' if desc else ''}{agg_key}"]
+                        break
+        
+        # Default sort order is by groupby fields if no sort specified
+        if not sort_order:
+            sort_order = groupby_fields.copy()
+            
+        # Apply the sorting
+        grouped_qs = queryset.values(*groupby_fields).annotate(**flat_aggregates).order_by(*sort_order)
         
         totals = {}
         for field, operations in self.group_by_aggregates.items():
@@ -171,11 +202,29 @@ class GroupByAdminMixin:
                     else:
                         label = f"{op_name.capitalize()} {field.replace('_', ' ')}"
                 
+                agg_key = f"{field}__{op_name}"
+                
+                # Create URLs for sorting
+                url_primary = cl.get_query_string({
+                    'sort': agg_key
+                })
+                
+                # Generate toggle URL (switch between ascending/descending)
+                url_toggle = cl.get_query_string({
+                    'sort': f"{'-' if not sort_param.startswith('-') else ''}{agg_key}" 
+                    if sort_param.replace('-', '') == agg_key else f"{agg_key}"
+                })
+                
                 aggregate_info.append({
-                    'key': f"{field}__{op_name}",
+                    'key': agg_key,
                     'field': field,
                     'operation': op_name,
-                    'label': label
+                    'label': label,
+                    'sortable': True,
+                    'sorted': sort_field == agg_key,
+                    'sort_direction': sort_direction if sort_field == agg_key else '',
+                    'url_primary': url_primary,
+                    'url_toggle': url_toggle
                 })
         
         class ChangeListTotals:

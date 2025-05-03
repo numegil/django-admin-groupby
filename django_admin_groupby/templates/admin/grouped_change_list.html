@@ -24,7 +24,17 @@
             {% endfor %}
             {% for agg in cl.aggregate_info %}
               <th scope="col" class="column-{{ agg.field|slugify }}_{{ agg.operation|slugify }}" style="padding: 5px 10px;">
-                <div class="text">{{ agg.label }}</div>
+                {% if agg.sortable %}
+                  {% if agg.sorted %}
+                    <div class="sortoptions">
+                      <a href="{{ agg.url_toggle }}" class="toggle {{ agg.sort_direction }}" title="{% translate "Toggle sorting" %}"></a>
+                    </div>
+                  {% endif %}
+                  <div class="text"><a href="{{ agg.url_primary }}">{{ agg.label }}</a></div>
+                  <div class="clear"></div>
+                {% else %}
+                  <div class="text">{{ agg.label }}</div>
+                {% endif %}
               </th>
             {% endfor %}
           </tr>
