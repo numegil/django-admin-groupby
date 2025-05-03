@@ -177,9 +177,35 @@ class GroupByAdminMixin:
                     'label': label
                 })
         
+        class ChangeListTotals:
+            def __init__(self, original_cl, **kwargs):
+                for attr in dir(original_cl):
+                    if not attr.startswith('__') and not callable(getattr(original_cl, attr)):
+                        setattr(self, attr, getattr(original_cl, attr))
+                
+                for key, value in kwargs.items():
+                    setattr(self, key, value)
+                
+                if not hasattr(self, 'formset'):
+                    self.formset = None
+                if not hasattr(self, 'result_hidden_fields'):
+                    self.result_hidden_fields = []
+                
+                self.get_query_string = original_cl.get_query_string
+                    
+        cl_totals = ChangeListTotals(
+            cl,
+            grouped_results=grouped_qs,
+            groupby_fields=groupby_fields,
+            groupby_field_names=groupby_field_names,
+            fields_with_choices=fields_with_choices,
+            aggregate_info=aggregate_info,
+            totals=totals
+        )
+        
         context = {
             **self.admin_site.each_context(request),
-            'cl': cl,
+            'cl': cl_totals,
             'grouped_results': grouped_qs,
             'groupby_fields': groupby_fields,
             'groupby_field_names': groupby_field_names,
