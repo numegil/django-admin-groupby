@@ -1,0 +1,76 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list django_admin_groupby %}
+
+{% block result_list %}
+  {% if grouped_results %}
+    <div class="results">
+      <table id="result_list">
+        <thead>
+          <tr>
+            {% for field_name in groupby_field_names %}
+              <th scope="col">{{ field_name }}</th>
+            {% endfor %}
+            {% for agg in aggregate_info %}
+              <th scope="col">{{ agg.label }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for result in grouped_results %}
+            <tr class="{% cycle 'row1' 'row2' %}">
+              {% for field in groupby_fields %}
+                {% if field|slice:"-4:" == "bool" or field|slice:"-3:" == "_is" or field|slice:"0:3" == "is_" %}
+                  <td class="field-boolean">
+                    {% if result|get_item:field %}
+                      <img src="{% static 'admin/img/icon-yes.svg' %}" alt="True">
+                    {% else %}
+                      <img src="{% static 'admin/img/icon-no.svg' %}" alt="False">
+                    {% endif %}
+                  </td>
+                {% elif field in fields_with_choices %}
+                  <td>{{ result|get_item:field|get_display:opts }}</td>
+                {% else %}
+                  <td>{{ result|get_item:field|default:"None" }}</td>
+                {% endif %}
+              {% endfor %}
+              
+              {% for agg in aggregate_info %}
+                <td>
+                  {% if agg.operation == 'avg' %}
+                    {{ result|get_item:agg.key|floatformat:1 }}
+                  {% else %}
+                    {{ result|get_item:agg.key }}
+                  {% endif %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+          <tr style="font-weight: bold;">
+            {% for field_name in groupby_field_names %}
+              {% if forloop.first %}
+                <td>{% trans "Total" %}</td>
+              {% else %}
+                <td></td>
+              {% endif %}
+            {% endfor %}
+            {% for agg in aggregate_info %}
+              <td>
+                {% if agg.operation == 'count' or agg.operation == 'sum' %}
+                  {{ totals|get_item:agg.key }}
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {{ block.super }}
+  {% endif %}
+{% endblock %}
+
+{% block pagination %}
+  {% if not grouped_results %}
+    {{ block.super }}
+  {% endif %}
+{% endblock %}
