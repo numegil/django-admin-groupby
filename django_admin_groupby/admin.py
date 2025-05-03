@@ -262,11 +262,7 @@ class GroupByAdminMixin:
             queryset=queryset,
             params=cl.params,
             date_hierarchy=getattr(cl, 'date_hierarchy', None),
-            result_list=empty_results,
-            paginator=None,
-            show_all=True,
-            show_full_result_count=False,
-            result_count=0
+            result_list=empty_results
         )
         
         context = {
