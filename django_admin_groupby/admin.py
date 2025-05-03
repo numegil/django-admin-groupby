@@ -3,6 +3,7 @@ from django.contrib.admin.filters import SimpleListFilter
 from django.db.models import Count
 from django.template.response import TemplateResponse
 from django.utils.translation import gettext_lazy as _
+from django.utils.text import slugify
 
 
 class GroupByFilter(SimpleListFilter):

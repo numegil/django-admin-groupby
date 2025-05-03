@@ -8,10 +8,16 @@
         <thead>
           <tr>
             {% for field_name in cl.groupby_field_names %}
-              <th scope="col">{{ field_name }}</th>
+              {% with fieldname=cl.groupby_fields|get_item:forloop.counter0|slugify %}
+              <th scope="col" class="column-{{ fieldname }}" style="padding: 5px 10px;">
+                <div class="text">{{ field_name }}</div>
+              </th>
+              {% endwith %}
             {% endfor %}
             {% for agg in cl.aggregate_info %}
-              <th scope="col">{{ agg.label }}</th>
+              <th scope="col" class="column-{{ agg.field|slugify }}_{{ agg.operation|slugify }}" style="padding: 5px 10px;">
+                <div class="text">{{ agg.label }}</div>
+              </th>
             {% endfor %}
           </tr>
         </thead>
@@ -20,7 +26,7 @@
             <tr class="{% cycle 'row1' 'row2' %}">
               {% for field in cl.groupby_fields %}
                 {% if field|slice:"-4:" == "bool" or field|slice:"-3:" == "_is" or field|slice:"0:3" == "is_" %}
-                  <td class="field-boolean">
+                  <td class="field-boolean" style="padding: 5px 10px;">
                     {% if result|get_item:field %}
                       <img src="{% static 'admin/img/icon-yes.svg' %}" alt="True">
                     {% else %}
@@ -28,14 +34,14 @@
                     {% endif %}
                   </td>
                 {% elif field in cl.fields_with_choices %}
-                  <td>{{ result|get_item:field|get_display:opts }}</td>
+                  <td style="padding: 5px 10px;">{{ result|get_item:field|get_display:opts }}</td>
                 {% else %}
-                  <td>{{ result|get_item:field|default:"None" }}</td>
+                  <td style="padding: 5px 10px;">{{ result|get_item:field|default:"None" }}</td>
                 {% endif %}
               {% endfor %}
               
               {% for agg in cl.aggregate_info %}
-                <td>
+                <td style="padding: 5px 10px;">
                   {% if agg.operation == 'avg' %}
                     {{ result|get_item:agg.key|floatformat:1 }}
                   {% else %}
@@ -48,13 +54,13 @@
           <tr style="font-weight: bold;">
             {% for field_name in cl.groupby_field_names %}
               {% if forloop.first %}
-                <td>{% trans "Total" %}</td>
+                <td style="padding: 5px 10px;">{% trans "Total" %}</td>
               {% else %}
-                <td></td>
+                <td style="padding: 5px 10px;"></td>
               {% endif %}
             {% endfor %}
             {% for agg in cl.aggregate_info %}
-              <td>
+              <td style="padding: 5px 10px;">
                 {% if agg.operation == 'count' or agg.operation == 'sum' %}
                   {{ cl.totals|get_item:agg.key }}
                 {% endif %}

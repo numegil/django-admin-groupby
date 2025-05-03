@@ -1,11 +1,16 @@
 from django import template
+from django.template.defaultfilters import slugify
 
 register = template.Library()
 
 @register.filter
-def get_item(dictionary, key):
-    """Get an item from a dictionary safely."""
-    return dictionary.get(key, None)
+def get_item(obj, key):
+    """Get an item from a dictionary or list safely."""
+    if isinstance(obj, dict):
+        return obj.get(key, None)
+    elif isinstance(obj, (list, tuple)) and isinstance(key, int) and 0 <= key < len(obj):
+        return obj[key]
+    return None
 
 @register.filter
 def get_display(value, model_opts):
