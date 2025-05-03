@@ -1,6 +1,14 @@
 {% extends "admin/change_list.html" %}
 {% load i18n admin_urls static admin_list django_admin_groupby %}
 
+{% block date_hierarchy %}
+  {% if cl.grouped_results %}
+    {# Hide date hierarchy when in grouped mode #}
+  {% else %}
+    {{ block.super }}
+  {% endif %}
+{% endblock %}
+
 {% block result_list %}
   {% if cl.grouped_results %}
     <div class="results">

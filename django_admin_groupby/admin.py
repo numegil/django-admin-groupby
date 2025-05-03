@@ -194,6 +194,9 @@ class GroupByAdminMixin:
                 
                 self.get_query_string = original_cl.get_query_string
                     
+        def empty_results():
+            return []
+        
         cl_totals = ChangeListTotals(
             cl,
             grouped_results=grouped_qs,
@@ -201,7 +204,12 @@ class GroupByAdminMixin:
             groupby_field_names=groupby_field_names,
             fields_with_choices=fields_with_choices,
             aggregate_info=aggregate_info,
-            totals=totals
+            totals=totals,
+            model=self.model,
+            queryset=queryset,
+            params=cl.params,
+            date_hierarchy=getattr(cl, 'date_hierarchy', None),
+            result_list=empty_results
         )
         
         context = {
