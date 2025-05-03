@@ -95,8 +95,6 @@ class GroupByAdminMixin:
             if field not in self.group_by_fields:
                 return super().changelist_view(request, extra_context)
         
-        # Make a mutable copy of request.GET and remove 'sort' parameter to avoid 
-        # Django trying to use it as a filtering parameter
         request_copy = request.GET.copy()
         sort_param = request_copy.pop('sort', [''])[0]
         request.GET = request_copy
@@ -109,10 +107,10 @@ class GroupByAdminMixin:
             for op_name, op_func in operations.items():
                 flat_aggregates[f"{field}__{op_name}"] = op_func
         
-        # Handle sorting for aggregates
         sort_order = []
         sort_field = None
         sort_direction = ''
+        original_sort_param = sort_param
         
         if sort_param:
             desc = False
@@ -129,11 +127,9 @@ class GroupByAdminMixin:
                         sort_order = [f"{'-' if desc else ''}{agg_key}"]
                         break
         
-        # Default sort order is by groupby fields if no sort specified
         if not sort_order:
             sort_order = groupby_fields.copy()
             
-        # Apply the sorting
         grouped_qs = queryset.values(*groupby_fields).annotate(**flat_aggregates).order_by(*sort_order)
         
         totals = {}
@@ -201,18 +197,26 @@ class GroupByAdminMixin:
                         label = "Count"
                     else:
                         label = f"{op_name.capitalize()} {field.replace('_', ' ')}"
-                
                 agg_key = f"{field}__{op_name}"
                 
-                # Create URLs for sorting
+                stripped_original_param = original_sort_param.replace('-', '') if original_sort_param else ''
+                is_current_sort = stripped_original_param == agg_key
+                is_descending = original_sort_param.startswith('-') if original_sort_param else False
+                
                 url_primary = cl.get_query_string({
                     'sort': agg_key
                 })
                 
-                # Generate toggle URL (switch between ascending/descending)
+                if is_current_sort:
+                    if is_descending:
+                        toggle_sort_param = agg_key
+                    else:
+                        toggle_sort_param = f"-{agg_key}"
+                else:
+                    toggle_sort_param = agg_key
+                
                 url_toggle = cl.get_query_string({
-                    'sort': f"{'-' if not sort_param.startswith('-') else ''}{agg_key}" 
-                    if sort_param.replace('-', '') == agg_key else f"{agg_key}"
+                    'sort': toggle_sort_param
                 })
                 
                 aggregate_info.append({
