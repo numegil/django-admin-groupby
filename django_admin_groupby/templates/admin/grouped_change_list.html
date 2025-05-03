@@ -30,9 +30,7 @@
                       <a href="{{ agg.url_toggle }}" class="toggle {{ agg.sort_direction }}" title="{% translate "Toggle sorting" %}"></a>
                     </div>
                   {% endif %}
-                  <div class="text">
-                    <a href="{{ agg.url_toggle }}">{{ agg.label }}</a>
-                  </div>
+                  <div class="text"><a href="{{ agg.url_primary }}">{{ agg.label }}</a></div>
                   <div class="clear"></div>
                 {% else %}
                   <div class="text">{{ agg.label }}</div>
