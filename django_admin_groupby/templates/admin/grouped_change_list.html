@@ -70,7 +70,7 @@
           {% for result in cl.grouped_results %}
             <tr class="{% cycle 'row1' 'row2' %}">
               {% for field in cl.groupby_fields %}
-                {% if field|slice:"-4:" == "bool" or field|slice:"-3:" == "_is" or field|slice:"0:3" == "is_" %}
+                {% if field in cl.boolean_fields %}
                   <td class="field-boolean">
                     <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
                       {% if result|get_item:field %}

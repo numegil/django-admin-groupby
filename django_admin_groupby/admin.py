@@ -258,6 +258,7 @@ class GroupByAdminMixin:
         
         groupby_field_names = []
         fields_with_choices = []
+        boolean_fields = []
         groupby_field_info = []
         
         for field_name in groupby_fields:
@@ -265,6 +266,9 @@ class GroupByAdminMixin:
             
             if hasattr(field_obj, 'choices') and field_obj.choices:
                 fields_with_choices.append(field_name)
+                
+            if field_obj.get_internal_type() == 'BooleanField':
+                boolean_fields.append(field_name)
             
             verbose_name = None
             if hasattr(field_obj, 'verbose_name') and field_obj.verbose_name:
@@ -392,6 +396,7 @@ class GroupByAdminMixin:
             groupby_field_names=groupby_field_names,
             groupby_field_info=groupby_field_info,
             fields_with_choices=fields_with_choices,
+            boolean_fields=boolean_fields,
             aggregate_info=aggregate_info,
             totals=totals,
             model=self.model,
