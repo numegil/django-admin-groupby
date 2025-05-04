@@ -98,7 +98,12 @@ class GroupByAdminMixin:
             if isinstance(value, bool):
                 value = '1' if value else '0'
                 
-            filter_params[f"{field}__exact"] = value
+            field_obj = self.model._meta.get_field(field)
+            
+            if hasattr(field_obj, 'choices') and field_obj.choices or field_obj.get_internal_type() == 'BooleanField':
+                filter_params[f"{field}__exact"] = value
+            else:
+                filter_params[field] = value
             
         return cl.get_query_string(filter_params, remove=['groupby', 'sort'])
     
