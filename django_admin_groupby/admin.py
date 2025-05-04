@@ -424,7 +424,7 @@ class GroupByAdminMixin:
             'fields_with_choices': fields_with_choices,
             'aggregate_info': aggregate_info,
             'totals': totals,
-            'title': cl.title,
+            'title': f"{self.model._meta.verbose_name_plural.title()} Groups",
             'is_popup': cl.is_popup,
             'model_admin': self,
             'app_label': self.model._meta.app_label,
