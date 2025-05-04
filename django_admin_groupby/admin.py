@@ -80,6 +80,16 @@ class GroupByAdminMixin:
     
     change_list_template = 'admin/grouped_change_list.html'
     
+    def _is_post_process_field(self, field_name):
+        """Check if a field is a post-processed field."""
+        clean_name = field_name[1:] if field_name.startswith('-') else field_name
+        
+        for field, operations in self.group_by_aggregates.items():
+            for op_name, op_func in operations.items():
+                if clean_name == f"{field}__{op_name}" and isinstance(op_func, PostProcess):
+                    return True
+        return False
+    
     def _apply_aggregation(self, values, agg_type):
         """Apply aggregation of the specified type to a list of values."""
         if not values:
@@ -164,7 +174,15 @@ class GroupByAdminMixin:
         if not sort_order:
             sort_order = groupby_fields.copy()
             
-        grouped_qs = queryset.values(*groupby_fields).annotate(**flat_aggregates).order_by(*sort_order)
+        # Check if we're trying to sort by a post-processed field
+        is_post_process_sort = any(self._is_post_process_field(param) for param in sort_order)
+                
+        if is_post_process_sort:
+            # For post-process sorting, don't include it in the database query
+            grouped_qs = queryset.values(*groupby_fields).annotate(**flat_aggregates).order_by(*groupby_fields)
+        else:
+            # For regular sorting, use the provided sort order
+            grouped_qs = queryset.values(*groupby_fields).annotate(**flat_aggregates).order_by(*sort_order)
         
         result_objects = None
         if post_process_aggregates:
@@ -184,7 +202,25 @@ class GroupByAdminMixin:
                     values = [pp_obj.func(obj) for obj in group_objects]
                     group_dict[agg_key] = self._apply_aggregation(values, pp_obj.aggregate)
         
-        if is_post_process_sort and post_process_sort_field:
+        if is_post_process_sort:
+            post_process_sort_params = []
+            for param in sort_order:
+                if self._is_post_process_field(param):
+                    clean_param = param[1:] if param.startswith('-') else param
+                    desc = param.startswith('-')
+                    post_process_sort_params.append((clean_param, desc))
+            
+            grouped_qs = list(grouped_qs)
+            
+            # Sort by all post-processed fields that were requested
+            for sort_param, is_desc in reversed(post_process_sort_params):
+                grouped_qs.sort(
+                    key=lambda x: (x.get(sort_param) is None, x.get(sort_param, 0)),
+                    reverse=is_desc
+                )
+            
+        # Also handle the original specific case for backward compatibility
+        elif post_process_sort_field:
             grouped_qs = list(grouped_qs)
             reverse_sort = sort_direction == 'descending'
             grouped_qs.sort(
