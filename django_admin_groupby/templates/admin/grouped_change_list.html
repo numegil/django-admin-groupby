@@ -30,13 +30,13 @@
           <tr>
             {% for field_name in cl.groupby_field_names %}
               {% with fieldname=cl.groupby_fields|get_item:forloop.counter0|slugify %}
-              <th scope="col" class="column-{{ fieldname }}" style="padding: 5px 10px;">
+              <th scope="col" class="column-{{ fieldname }}" style="padding: 5px 0;">
                 <div class="text">{{ field_name }}</div>
               </th>
               {% endwith %}
             {% endfor %}
             {% for agg in cl.aggregate_info %}
-              <th scope="col" class="column-{{ agg.field|slugify }}_{{ agg.operation|slugify }}" style="padding: 5px 10px;">
+              <th scope="col" class="column-{{ agg.field|slugify }}_{{ agg.operation|slugify }}" style="padding: 5px 0;">
                 {% if agg.sortable %}
                   {% if agg.sorted %}
                     <div class="sortoptions">
@@ -60,7 +60,7 @@
               {% for field in cl.groupby_fields %}
                 {% if field|slice:"-4:" == "bool" or field|slice:"-3:" == "_is" or field|slice:"0:3" == "is_" %}
                   <td class="field-boolean" style="padding: 5px 10px;">
-                    <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link">
+                    <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
                       {% if result|get_item:field %}
                         <img src="{% static 'admin/img/icon-yes.svg' %}" alt="True">
                       {% else %}
@@ -70,13 +70,13 @@
                   </td>
                 {% elif field in cl.fields_with_choices %}
                   <td style="padding: 5px 10px;">
-                    <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link">
+                    <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
                       {{ result|get_item:field|get_display:opts }}
                     </a>
                   </td>
                 {% else %}
                   <td style="padding: 5px 10px;">
-                    <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link">
+                    <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
                       {{ result|get_item:field|default:"None" }}
                     </a>
                   </td>
