@@ -124,7 +124,7 @@ class GroupByAdminMixin:
     def get_list_filter(self, request):
         list_filter = super().get_list_filter(request)
         if self.group_by_fields:
-            return list(list_filter) + [GroupByFilter]
+            return [GroupByFilter] + list(list_filter)
         return list_filter
 
     def changelist_view(self, request, extra_context=None):
