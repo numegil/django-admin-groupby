@@ -169,20 +169,27 @@ class GroupByAdminMixin:
                 desc = True
                 sort_param = sort_param[1:]
             
-            for field, operations in self.group_by_aggregates.items():
-                for op_name in operations.keys():
-                    agg_key = f"{field}__{op_name}"
-                    if sort_param == agg_key:
-                        sort_field = agg_key
-                        sort_direction = 'descending' if desc else 'ascending'
-                        
-                        if op_name != 'post_process':
-                            sort_order = [f"{'-' if desc else ''}{agg_key}"]
-                        else:
-                            is_post_process_sort = True
-                            post_process_sort_field = agg_key
-                            sort_order = groupby_fields.copy()
-                        break
+            # Check if sorting by a groupby field
+            if sort_param in groupby_fields:
+                sort_field = sort_param
+                sort_direction = 'descending' if desc else 'ascending'
+                sort_order = [f"{'-' if desc else ''}{sort_param}"]
+            else:
+                # Check if sorting by an aggregate field
+                for field, operations in self.group_by_aggregates.items():
+                    for op_name in operations.keys():
+                        agg_key = f"{field}__{op_name}"
+                        if sort_param == agg_key:
+                            sort_field = agg_key
+                            sort_direction = 'descending' if desc else 'ascending'
+                            
+                            if op_name != 'post_process':
+                                sort_order = [f"{'-' if desc else ''}{agg_key}"]
+                            else:
+                                is_post_process_sort = True
+                                post_process_sort_field = agg_key
+                                sort_order = groupby_fields.copy()
+                            break
         
         if not sort_order:
             sort_order = groupby_fields.copy()
@@ -260,18 +267,52 @@ class GroupByAdminMixin:
         
         groupby_field_names = []
         fields_with_choices = []
+        groupby_field_info = []
         
         for field_name in groupby_fields:
             field_obj = self.model._meta.get_field(field_name)
             
             if hasattr(field_obj, 'choices') and field_obj.choices:
                 fields_with_choices.append(field_name)
+            
+            verbose_name = None
             if hasattr(field_obj, 'verbose_name') and field_obj.verbose_name:
                 verbose_name = str(field_obj.verbose_name)
                 groupby_field_names.append(verbose_name)
             else:
-                title = field_name.replace('_', ' ').title()
-                groupby_field_names.append(title)
+                verbose_name = field_name.replace('_', ' ').title()
+                groupby_field_names.append(verbose_name)
+                
+            # Generate sorting URLs for this groupby field
+            stripped_original_param = original_sort_param.replace('-', '') if original_sort_param else ''
+            is_current_sort = stripped_original_param == field_name
+            is_descending = original_sort_param.startswith('-') if original_sort_param else False
+            
+            url_primary = cl.get_query_string({
+                'sort': field_name
+            })
+            
+            if is_current_sort:
+                if is_descending:
+                    toggle_sort_param = field_name
+                else:
+                    toggle_sort_param = f"-{field_name}"
+            else:
+                toggle_sort_param = field_name
+            
+            url_toggle = cl.get_query_string({
+                'sort': toggle_sort_param
+            })
+            
+            groupby_field_info.append({
+                'field': field_name,
+                'verbose_name': verbose_name,
+                'sortable': True,
+                'sorted': sort_field == field_name,
+                'sort_direction': sort_direction if sort_field == field_name else '',
+                'url_primary': url_primary,
+                'url_toggle': url_toggle
+            })
         
         aggregate_info = []
         for field, operations in self.group_by_aggregates.items():
@@ -358,6 +399,7 @@ class GroupByAdminMixin:
             grouped_results=grouped_qs,
             groupby_fields=groupby_fields,
             groupby_field_names=groupby_field_names,
+            groupby_field_info=groupby_field_info,
             fields_with_choices=fields_with_choices,
             aggregate_info=aggregate_info,
             totals=totals,
@@ -378,6 +420,7 @@ class GroupByAdminMixin:
             'grouped_results': grouped_qs,
             'groupby_fields': groupby_fields,
             'groupby_field_names': groupby_field_names,
+            'groupby_field_info': groupby_field_info,
             'fields_with_choices': fields_with_choices,
             'aggregate_info': aggregate_info,
             'totals': totals,

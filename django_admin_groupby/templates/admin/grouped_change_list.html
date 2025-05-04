@@ -28,12 +28,22 @@
       <table id="result_list">
         <thead>
           <tr>
-            {% for field_name in cl.groupby_field_names %}
-              {% with fieldname=cl.groupby_fields|get_item:forloop.counter0|slugify %}
-              <th scope="col" class="column-{{ fieldname }}" style="padding: 5px 0;">
-                <div class="text">{{ field_name }}</div>
+            {% for field_info in cl.groupby_field_info %}
+              <th scope="col" class="column-{{ field_info.field|slugify }}" style="padding: 5px 0;">
+                {% if field_info.sortable %}
+                  {% if field_info.sorted %}
+                    <div class="sortoptions">
+                      <a href="{{ field_info.url_toggle }}" class="toggle {{ field_info.sort_direction }}" title="{% translate "Toggle sorting" %}"></a>
+                    </div>
+                  {% endif %}
+                  <div class="text">
+                    <a href="{{ field_info.url_toggle }}">{{ field_info.verbose_name }}</a>
+                  </div>
+                  <div class="clear"></div>
+                {% else %}
+                  <div class="text">{{ field_info.verbose_name }}</div>
+                {% endif %}
               </th>
-              {% endwith %}
             {% endfor %}
             {% for agg in cl.aggregate_info %}
               <th scope="col" class="column-{{ agg.field|slugify }}_{{ agg.operation|slugify }}" style="padding: 5px 0;">
