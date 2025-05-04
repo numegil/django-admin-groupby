@@ -5,6 +5,8 @@ from django.template.response import TemplateResponse
 from django.utils.translation import gettext_lazy as _
 from django.utils.text import slugify
 
+from django_admin_groupby.aggregations import PostProcess
+
 
 class GroupByFilter(SimpleListFilter):
     title = _('Group by')
@@ -125,8 +127,8 @@ class GroupByAdminMixin:
         
         for field, operations in self.group_by_aggregates.items():
             for op_name, op_func in operations.items():
-                if op_name == 'post_process':
-                    post_process_aggregates[field] = op_func
+                if isinstance(op_func, PostProcess):
+                    post_process_aggregates[(field, op_name)] = op_func
                 else:
                     flat_aggregates[f"{field}__{op_name}"] = op_func
         
@@ -177,17 +179,10 @@ class GroupByAdminMixin:
             if post_process_aggregates:
                 group_key = tuple(group_dict[field] for field in groupby_fields)
                 group_objects = result_objects.get(group_key, [])
-                for field, pp_config in post_process_aggregates.items():
-                    agg_key = f"{field}__post_process"
-                    agg_type = pp_config.get('aggregate', 'sum')
-                    
-                    # Only support direct lambda functions
-                    if 'func' in pp_config:
-                        func = pp_config['func']
-                        assert callable(func), "The 'func' parameter must be callable"
-                        values = [func(obj) for obj in group_objects]
-                        
-                    group_dict[agg_key] = self._apply_aggregation(values, agg_type)
+                for (field, op_name), pp_obj in post_process_aggregates.items():
+                    agg_key = f"{field}__{op_name}"
+                    values = [pp_obj.func(obj) for obj in group_objects]
+                    group_dict[agg_key] = self._apply_aggregation(values, pp_obj.aggregate)
         
         if is_post_process_sort and post_process_sort_field:
             grouped_qs = list(grouped_qs)
@@ -200,11 +195,10 @@ class GroupByAdminMixin:
         totals = {}
         for field, operations in self.group_by_aggregates.items():
             for op_name in operations.keys():
-                if op_name == 'post_process':
-                    agg_key = f"{field}__post_process"
-                    agg_type = operations[op_name].get('aggregate', 'sum')
+                if isinstance(operations[op_name], PostProcess):
+                    agg_key = f"{field}__{op_name}"
                     values = [item[agg_key] for item in grouped_qs if agg_key in item and item[agg_key] is not None]
-                    totals[agg_key] = self._apply_aggregation(values, agg_type)
+                    totals[agg_key] = self._apply_aggregation(values, operations[op_name].aggregate)
                 else:
                     agg_key = f"{field}__{op_name}"
                     values = [item[agg_key] for item in grouped_qs if agg_key in item and item[agg_key] is not None]
@@ -233,9 +227,12 @@ class GroupByAdminMixin:
             for op_name in operations.keys():
                 agg_key = f"{field}__{op_name}"
                 
-                if op_name == 'post_process':
-                    op_config = operations[op_name]
-                    label = op_config.get('verbose_name', f"Custom {field.replace('_', ' ')}")
+                is_post_process = isinstance(operations[op_name], PostProcess)
+                
+                if is_post_process:
+                    pp_obj = operations[op_name]
+                    verbose_name = pp_obj.extra.get('verbose_name')
+                    label = verbose_name if verbose_name else f"{op_name.capitalize()} {field.replace('_', ' ')}"
                 else:
                     agg_func = operations[op_name]
                     verbose_name = None
@@ -278,6 +275,7 @@ class GroupByAdminMixin:
                     'field': field,
                     'operation': op_name,
                     'label': label,
+                    'is_post_process': is_post_process,
                     'sortable': True,
                     'sorted': sort_field == agg_key,
                     'sort_direction': sort_direction if sort_field == agg_key else '',

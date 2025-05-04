@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.db.models import Count, Sum, Avg, Min, Max, StdDev, Variance, Case, When
 from .models import Cat
 from django_admin_groupby.admin import GroupByAdminMixin
+from django_admin_groupby.aggregations import PostProcess
 
 @admin.register(Cat)
 class CatAdmin(GroupByAdminMixin, admin.ModelAdmin):
@@ -31,10 +32,10 @@ class CatAdmin(GroupByAdminMixin, admin.ModelAdmin):
             # 'max': Max('age', extra={'verbose_name': "Maximum Age"})
         },
         'name_length': {
-            'post_process': {
-                'func': lambda cat: len(cat.name),
-                'verbose_name': 'Total Name Length',
-                'aggregate': 'sum'
-            }
+            'total': PostProcess(
+                lambda cat: len(cat.name),
+                verbose_name='Total Name Length', 
+                aggregate='sum'
+            )
         }
     }

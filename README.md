@@ -8,6 +8,7 @@ It works by adding a "Group by" filter in the admin sidebar, allowing you to sel
 
 * **Group Data Directly in Admin:** Easily group by model fields to quickly identify patterns.
 * **Built-in Aggregations:** Perform counts, sums, averages and more including advanced custom aggregations.
+* **Custom Calculations:** Aggregate calculated fields with lambda functions that run after database queries.
 * **Compatible:** Integrates seamlessly with Django admin filters, search, and permissions.
 * **Efficient:** Performs aggregations server-side, suitable for large datasets.
 
@@ -38,6 +39,7 @@ Here's an example demonstrating both basic grouping and advanced aggregations:
 from django.contrib import admin
 from django.db.models import Count, Sum, Avg, Q
 from django_admin_groupby.admin import GroupByAdminMixin
+from django_admin_groupby import PostProcess
 from .models import Product
 
 @admin.register(Product)
@@ -58,6 +60,13 @@ class ProductAdmin(GroupByAdminMixin, admin.ModelAdmin):
             'sum': Sum('price', extra={'verbose_name': "Total Value"}),
             'expensive_items': Count('id', filter=Q(price__gte=100),
                                      extra={'verbose_name': "Expensive Items (>= $100)"}),
+        },
+        'profit_margin': {
+            'total': PostProcess(
+                lambda product: product.price - product.cost,
+                verbose_name="Profit Margin",
+                aggregate="avg"
+            )
         }
     }
 ```
