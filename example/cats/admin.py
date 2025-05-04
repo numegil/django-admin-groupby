@@ -29,5 +29,12 @@ class CatAdmin(GroupByAdminMixin, admin.ModelAdmin):
             'avg': Avg('age', extra={'verbose_name': "Average Age"}),
             # 'variance': Variance('age', extra={'verbose_name': "Age Variance"}),
             # 'max': Max('age', extra={'verbose_name': "Maximum Age"})
+        },
+        'name_length': {
+            'post_process': {
+                'func': lambda cat: len(cat.name),
+                'verbose_name': 'Total Name Length',
+                'aggregate': 'sum'
+            }
         }
     }

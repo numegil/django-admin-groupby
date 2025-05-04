@@ -77,6 +77,24 @@ class GroupByAdminMixin:
     }
     
     change_list_template = 'admin/grouped_change_list.html'
+    
+    def _apply_aggregation(self, values, agg_type):
+        """Apply aggregation of the specified type to a list of values."""
+        if not values:
+            return 0
+            
+        if agg_type == 'avg':
+            return sum(values) / len(values)
+        elif agg_type == 'sum':
+            return sum(values)
+        elif agg_type == 'min':
+            return min(values)
+        elif agg_type == 'max':
+            return max(values)
+        elif agg_type == 'count':
+            return len(values)
+        else:
+            return sum(values)
 
     def get_list_filter(self, request):
         list_filter = super().get_list_filter(request)
@@ -103,28 +121,42 @@ class GroupByAdminMixin:
         queryset = cl.get_queryset(request)
         
         flat_aggregates = {}
+        post_process_aggregates = {}
+        
         for field, operations in self.group_by_aggregates.items():
             for op_name, op_func in operations.items():
-                flat_aggregates[f"{field}__{op_name}"] = op_func
+                if op_name == 'post_process':
+                    post_process_aggregates[field] = op_func
+                else:
+                    flat_aggregates[f"{field}__{op_name}"] = op_func
         
         sort_order = []
         sort_field = None
         sort_direction = ''
         original_sort_param = sort_param
         
+        is_post_process_sort = False
+        post_process_sort_field = None
+        
         if sort_param:
             desc = False
             if sort_param.startswith('-'):
                 desc = True
                 sort_param = sort_param[1:]
-                
+            
             for field, operations in self.group_by_aggregates.items():
                 for op_name in operations.keys():
                     agg_key = f"{field}__{op_name}"
                     if sort_param == agg_key:
                         sort_field = agg_key
                         sort_direction = 'descending' if desc else 'ascending'
-                        sort_order = [f"{'-' if desc else ''}{agg_key}"]
+                        
+                        if op_name != 'post_process':
+                            sort_order = [f"{'-' if desc else ''}{agg_key}"]
+                        else:
+                            is_post_process_sort = True
+                            post_process_sort_field = agg_key
+                            sort_order = groupby_fields.copy()
                         break
         
         if not sort_order:
@@ -132,31 +164,54 @@ class GroupByAdminMixin:
             
         grouped_qs = queryset.values(*groupby_fields).annotate(**flat_aggregates).order_by(*sort_order)
         
+        result_objects = None
+        if post_process_aggregates:
+            result_objects = {}
+            for group_values in grouped_qs:
+                filter_kwargs = {field: group_values[field] for field in groupby_fields}
+                group_objects = list(queryset.filter(**filter_kwargs))
+                group_key = tuple(group_values[field] for field in groupby_fields)
+                result_objects[group_key] = group_objects
+        
+        for group_dict in grouped_qs:
+            if post_process_aggregates:
+                group_key = tuple(group_dict[field] for field in groupby_fields)
+                group_objects = result_objects.get(group_key, [])
+                for field, pp_config in post_process_aggregates.items():
+                    agg_key = f"{field}__post_process"
+                    agg_type = pp_config.get('aggregate', 'sum')
+                    
+                    # Only support direct lambda functions
+                    if 'func' in pp_config:
+                        func = pp_config['func']
+                        assert callable(func), "The 'func' parameter must be callable"
+                        values = [func(obj) for obj in group_objects]
+                        
+                    group_dict[agg_key] = self._apply_aggregation(values, agg_type)
+        
+        if is_post_process_sort and post_process_sort_field:
+            grouped_qs = list(grouped_qs)
+            reverse_sort = sort_direction == 'descending'
+            grouped_qs.sort(
+                key=lambda x: (x.get(post_process_sort_field) is None, x.get(post_process_sort_field, 0)),
+                reverse=reverse_sort
+            )
+        
         totals = {}
         for field, operations in self.group_by_aggregates.items():
             for op_name in operations.keys():
-                agg_key = f"{field}__{op_name}"
-                try:
+                if op_name == 'post_process':
+                    agg_key = f"{field}__post_process"
+                    agg_type = operations[op_name].get('aggregate', 'sum')
+                    values = [item[agg_key] for item in grouped_qs if agg_key in item and item[agg_key] is not None]
+                    totals[agg_key] = self._apply_aggregation(values, agg_type)
+                else:
+                    agg_key = f"{field}__{op_name}"
+                    values = [item[agg_key] for item in grouped_qs if agg_key in item and item[agg_key] is not None]
                     if op_name == 'avg':
-                        # Find a count field to use for weighted average
-                        count_key = next((f"{count_field}__{count_op}" for count_field, count_ops in self.group_by_aggregates.items() 
-                                         for count_op in count_ops if count_op == 'count'), None)
-                        
-                        # Handle empty queryset case first
-                        if not grouped_qs:
-                            totals[agg_key] = 0
-                        # Use weighted average when count field exists
-                        elif count_key:
-                            weighted_sum = sum(item[agg_key] * item[count_key] for item in grouped_qs)
-                            total_count = sum(item[count_key] for item in grouped_qs)
-                            totals[agg_key] = weighted_sum / total_count if total_count > 0 else 0
-                        # Fall back to simple average
-                        else:
-                            totals[agg_key] = sum(item[agg_key] for item in grouped_qs) / len(grouped_qs)
+                        totals[agg_key] = self._apply_aggregation(values, 'avg')
                     else:
-                        totals[agg_key] = sum(item[agg_key] for item in grouped_qs)
-                except (TypeError, ValueError):
-                    totals[agg_key] = None
+                        totals[agg_key] = self._apply_aggregation(values, 'sum')
         
         groupby_field_names = []
         fields_with_choices = []
@@ -164,11 +219,8 @@ class GroupByAdminMixin:
         for field_name in groupby_fields:
             field_obj = self.model._meta.get_field(field_name)
             
-            # Track fields that have choices
             if hasattr(field_obj, 'choices') and field_obj.choices:
                 fields_with_choices.append(field_name)
-            
-            # Get the display name for column headers
             if hasattr(field_obj, 'verbose_name') and field_obj.verbose_name:
                 verbose_name = str(field_obj.verbose_name)
                 groupby_field_names.append(verbose_name)
@@ -179,25 +231,27 @@ class GroupByAdminMixin:
         aggregate_info = []
         for field, operations in self.group_by_aggregates.items():
             for op_name in operations.keys():
-                agg_func = operations[op_name]
-                verbose_name = None
-                
-                if hasattr(agg_func, 'extra') and isinstance(agg_func.extra, dict):
-                    # Try to get verbose_name directly from extra dict
-                    verbose_name = agg_func.extra.get('verbose_name')
-                    
-                    # If not found, check nested extra dict
-                    if not verbose_name and 'extra' in agg_func.extra and isinstance(agg_func.extra['extra'], dict):
-                        verbose_name = agg_func.extra['extra'].get('verbose_name')
-                
-                if verbose_name:
-                    label = str(verbose_name)
-                else:
-                    if field == 'id' and op_name == 'count':
-                        label = "Count"
-                    else:
-                        label = f"{op_name.capitalize()} {field.replace('_', ' ')}"
                 agg_key = f"{field}__{op_name}"
+                
+                if op_name == 'post_process':
+                    op_config = operations[op_name]
+                    label = op_config.get('verbose_name', f"Custom {field.replace('_', ' ')}")
+                else:
+                    agg_func = operations[op_name]
+                    verbose_name = None
+                    
+                    if hasattr(agg_func, 'extra') and isinstance(agg_func.extra, dict):
+                        verbose_name = agg_func.extra.get('verbose_name')
+                        if not verbose_name and 'extra' in agg_func.extra and isinstance(agg_func.extra['extra'], dict):
+                            verbose_name = agg_func.extra['extra'].get('verbose_name')
+                    
+                    if verbose_name:
+                        label = str(verbose_name)
+                    else:
+                        if field == 'id' and op_name == 'count':
+                            label = "Count"
+                        else:
+                            label = f"{op_name.capitalize()} {field.replace('_', ' ')}"
                 
                 stripped_original_param = original_sort_param.replace('-', '') if original_sort_param else ''
                 is_current_sort = stripped_original_param == agg_key

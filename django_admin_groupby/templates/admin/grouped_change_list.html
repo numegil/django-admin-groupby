@@ -64,6 +64,8 @@
                 <td style="padding: 5px 10px;">
                   {% if agg.operation == 'avg' %}
                     {{ result|get_item:agg.key|floatformat:1 }}
+                  {% elif agg.operation == 'post_process' %}
+                    {{ result|get_item:agg.key }}
                   {% else %}
                     {{ result|get_item:agg.key }}
                   {% endif %}
@@ -82,6 +84,8 @@
             {% for agg in cl.aggregate_info %}
               <td style="padding: 5px 10px;">
                 {% if agg.operation == 'count' or agg.operation == 'sum' %}
+                  {{ cl.totals|get_item:agg.key }}
+                {% elif agg.operation == 'post_process' %}
                   {{ cl.totals|get_item:agg.key }}
                 {% endif %}
               </td>
