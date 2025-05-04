@@ -89,6 +89,19 @@ class GroupByAdminMixin:
                 if clean_name == f"{field}__{op_name}" and isinstance(op_func, PostProcess):
                     return True
         return False
+        
+    def get_filter_url_for_group(self, cl, group_values, groupby_fields):
+        filter_params = {}
+        
+        for field in groupby_fields:
+            value = group_values.get(field)
+            
+            if isinstance(value, bool):
+                value = '1' if value else '0'
+                
+            filter_params[f"{field}__exact"] = value
+            
+        return cl.get_query_string(filter_params, remove=['groupby', 'sort'])
     
     def _apply_aggregation(self, values, agg_type):
         """Apply aggregation of the specified type to a list of values."""
@@ -201,6 +214,8 @@ class GroupByAdminMixin:
                     agg_key = f"{field}__{op_name}"
                     values = [pp_obj.func(obj) for obj in group_objects]
                     group_dict[agg_key] = self._apply_aggregation(values, pp_obj.aggregate)
+            
+            group_dict['_filter_url'] = self.get_filter_url_for_group(cl, group_dict, groupby_fields)
         
         if is_post_process_sort:
             post_process_sort_params = []

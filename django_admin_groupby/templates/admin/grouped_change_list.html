@@ -1,6 +1,19 @@
 {% extends "admin/change_list.html" %}
 {% load i18n admin_urls static admin_list django_admin_groupby %}
 
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    .grp-cell-filter-link {
+      color: #447e9b;
+      text-decoration: none;
+    }
+    .grp-cell-filter-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+{% endblock %}
+
 {% block date_hierarchy %}
   {% if cl.grouped_results %}
     {# Hide date hierarchy when in grouped mode #}
@@ -47,16 +60,26 @@
               {% for field in cl.groupby_fields %}
                 {% if field|slice:"-4:" == "bool" or field|slice:"-3:" == "_is" or field|slice:"0:3" == "is_" %}
                   <td class="field-boolean" style="padding: 5px 10px;">
-                    {% if result|get_item:field %}
-                      <img src="{% static 'admin/img/icon-yes.svg' %}" alt="True">
-                    {% else %}
-                      <img src="{% static 'admin/img/icon-no.svg' %}" alt="False">
-                    {% endif %}
+                    <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link">
+                      {% if result|get_item:field %}
+                        <img src="{% static 'admin/img/icon-yes.svg' %}" alt="True">
+                      {% else %}
+                        <img src="{% static 'admin/img/icon-no.svg' %}" alt="False">
+                      {% endif %}
+                    </a>
                   </td>
                 {% elif field in cl.fields_with_choices %}
-                  <td style="padding: 5px 10px;">{{ result|get_item:field|get_display:opts }}</td>
+                  <td style="padding: 5px 10px;">
+                    <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link">
+                      {{ result|get_item:field|get_display:opts }}
+                    </a>
+                  </td>
                 {% else %}
-                  <td style="padding: 5px 10px;">{{ result|get_item:field|default:"None" }}</td>
+                  <td style="padding: 5px 10px;">
+                    <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link">
+                      {{ result|get_item:field|default:"None" }}
+                    </a>
+                  </td>
                 {% endif %}
               {% endfor %}
               
