@@ -3,13 +3,6 @@
 
 {% block title %}{% if title %}{{ title }} | {% endif %}{{ site_title|default:_('Django site admin') }}{% endblock %}
 
-{% block content_title %}
-  {% if cl.grouped_results %}
-    {# Don't show title for grouped view #}
-  {% else %}
-    {{ block.super }}
-  {% endif %}
-{% endblock %}
 {% block extrastyle %}
   {{ block.super }}
   <style>
