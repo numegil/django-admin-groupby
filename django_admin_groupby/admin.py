@@ -16,12 +16,11 @@ class GroupByFilter(SimpleListFilter):
     def __init__(self, request, params, model, model_admin):
         super().__init__(request, params, model, model_admin)
         self.model_admin = model_admin
-        self.used_parameters = {}
         
         if self.parameter_name in params:
             value = params.pop(self.parameter_name)
             if value:
-                self.used_parameters[self.parameter_name] = value
+                self.used_parameters = {self.parameter_name: value}
 
     def lookups(self, request, model_admin):
         group_by_fields = getattr(model_admin, 'group_by_fields', [])
@@ -118,8 +117,8 @@ class GroupByAdminMixin:
             return max(values)
         elif agg_type == 'count':
             return len(values)
-        else:
-            return sum(values)
+        # Default to sum for unknown aggregation types
+        return sum(values)
 
     def get_list_filter(self, request):
         list_filter = super().get_list_filter(request)
@@ -241,14 +240,6 @@ class GroupByAdminMixin:
                     reverse=is_desc
                 )
             
-        # Also handle the original specific case for backward compatibility
-        elif post_process_sort_field:
-            grouped_qs = list(grouped_qs)
-            reverse_sort = sort_direction == 'descending'
-            grouped_qs.sort(
-                key=lambda x: (x.get(post_process_sort_field) is None, x.get(post_process_sort_field, 0)),
-                reverse=reverse_sort
-            )
         
         totals = {}
         for field, operations in self.group_by_aggregates.items():

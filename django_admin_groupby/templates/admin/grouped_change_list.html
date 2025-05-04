@@ -13,33 +13,6 @@
     .grp-cell-filter-link:hover {
       text-decoration: underline;
     }
-    
-    /* Ensure sort indicators display correctly */
-    .sortoptions {
-      float: right;
-      padding-right: 0.5em;
-    }
-    .sortoptions a.toggle {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      background: url({% static 'admin/img/sorting-icons.svg' %}) 0 0 no-repeat;
-      background-size: 14px auto;
-    }
-    .sortoptions a.ascending {
-      background-position: 0 -28px; /* Use correct slice for positive/ascending sorting */
-    }
-    .sortoptions a.descending {
-      background-position: 0 -56px; /* Use correct slice for negative/descending sorting */
-    }
-    th .text a {
-      display: block;
-      text-decoration: none;
-      padding: 2px 5px;
-    }
-    th .text a:focus, th .text a:hover {
-      background: #e6e6e6;
-    }
   </style>
 {% endblock %}
 
