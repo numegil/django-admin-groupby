@@ -309,7 +309,7 @@ class GroupByAdminMixin:
                 'verbose_name': verbose_name,
                 'sortable': True,
                 'sorted': sort_field == field_name,
-                'sort_direction': sort_direction if sort_field == field_name else '',
+                'sort_direction': 'descending' if sort_direction == 'descending' and sort_field == field_name else 'ascending',
                 'url_primary': url_primary,
                 'url_toggle': url_toggle
             })
@@ -370,7 +370,7 @@ class GroupByAdminMixin:
                     'is_post_process': is_post_process,
                     'sortable': True,
                     'sorted': sort_field == agg_key,
-                    'sort_direction': sort_direction if sort_field == agg_key else '',
+                    'sort_direction': 'descending' if sort_direction == 'descending' and sort_field == agg_key else 'ascending',
                     'url_primary': url_primary,
                     'url_toggle': url_toggle
                 })

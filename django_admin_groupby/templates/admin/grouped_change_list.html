@@ -11,6 +11,33 @@
     .grp-cell-filter-link:hover {
       text-decoration: underline;
     }
+    
+    /* Ensure sort indicators display correctly */
+    .sortoptions {
+      float: right;
+      padding-right: 0.5em;
+    }
+    .sortoptions a.toggle {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      background: url({% static 'admin/img/sorting-icons.svg' %}) 0 0 no-repeat;
+      background-size: 14px auto;
+    }
+    .sortoptions a.ascending {
+      background-position: 0 -28px; /* Use correct slice for positive/ascending sorting */
+    }
+    .sortoptions a.descending {
+      background-position: 0 -56px; /* Use correct slice for negative/descending sorting */
+    }
+    th .text a {
+      display: block;
+      text-decoration: none;
+      padding: 2px 5px;
+    }
+    th .text a:focus, th .text a:hover {
+      background: #e6e6e6;
+    }
   </style>
 {% endblock %}
 
@@ -29,7 +56,7 @@
         <thead>
           <tr>
             {% for field_info in cl.groupby_field_info %}
-              <th scope="col" class="column-{{ field_info.field|slugify }}">
+              <th scope="col" class="column-{{ field_info.field|slugify }}{% if field_info.sorted %} sorted{% endif %}">
                 {% if field_info.sortable %}
                   {% if field_info.sorted %}
                     <div class="sortoptions">
@@ -46,7 +73,7 @@
               </th>
             {% endfor %}
             {% for agg in cl.aggregate_info %}
-              <th scope="col" class="column-{{ agg.field|slugify }}_{{ agg.operation|slugify }}">
+              <th scope="col" class="column-{{ agg.field|slugify }}_{{ agg.operation|slugify }}{% if agg.sorted %} sorted{% endif %}">
                 {% if agg.sortable %}
                   {% if agg.sorted %}
                     <div class="sortoptions">
