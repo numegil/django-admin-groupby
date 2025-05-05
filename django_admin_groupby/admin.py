@@ -378,7 +378,7 @@ class GroupByAdminMixin:
         class ChangeListTotals:
             def __init__(self, original_cl, **kwargs):
                 for attr in dir(original_cl):
-                    if not attr.startswith('__') and not callable(getattr(original_cl, attr)):
+                    if not attr.startswith('__') and not callable(getattr(original_cl, attr)) and attr != 'result_list':
                         setattr(self, attr, getattr(original_cl, attr))
                 
                 for key, value in kwargs.items():
@@ -390,9 +390,11 @@ class GroupByAdminMixin:
                     self.result_hidden_fields = []
                 
                 self.get_query_string = original_cl.get_query_string
-                    
-        def empty_results():
-            return []
+                
+                if hasattr(original_cl, 'get_ordering_field_columns'):
+                    self.get_ordering_field_columns = original_cl.get_ordering_field_columns
+                
+                self.result_list = []
         
         cl_totals = ChangeListTotals(
             cl,
@@ -408,7 +410,7 @@ class GroupByAdminMixin:
             queryset=queryset,
             params=cl.params,
             date_hierarchy=getattr(cl, 'date_hierarchy', None),
-            result_list=empty_results,
+            result_list=[],
             paginator=None,
             show_all=True,
             show_full_result_count=False,
