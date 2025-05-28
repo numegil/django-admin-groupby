@@ -14,10 +14,8 @@ It works by adding a "Group by" filter in the admin sidebar, allowing you to sel
 
 ## Installation
 
-Install the package directly from GitHub:
-
 ```bash
-pip install git+https://github.com/numegil/django-admin-groupby.git
+pip install django-admin-groupby
 ```
 
 Add the app to your `INSTALLED_APPS` in `settings.py`:
