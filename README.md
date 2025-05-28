@@ -42,7 +42,6 @@ from .models import Product
 
 @admin.register(Product)
 class ProductAdmin(GroupByAdminMixin, admin.ModelAdmin):
-
     # ...
 
     group_by_fields = ['category', 'in_stock']
