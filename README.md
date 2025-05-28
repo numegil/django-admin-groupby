@@ -42,11 +42,12 @@ from .models import Product
 
 @admin.register(Product)
 class ProductAdmin(GroupByAdminMixin, admin.ModelAdmin):
-    # ... your existing admin stuff
+
+    # ...
 
     group_by_fields = ['category', 'in_stock']
 
-    # optional, defaults to just counts if nothing is specified.
+    # (optional, defaults to just counts if nothing is specified)
     group_by_aggregates = {
         'id': {
             'count': Count('id', extra={'verbose_name': "Total Products"}),
@@ -71,9 +72,9 @@ class ProductAdmin(GroupByAdminMixin, admin.ModelAdmin):
 
 ## Demo
 
-<img width="1727" alt="Screenshot 2025-05-27 at 9 23 08 PM" src="https://github.com/user-attachments/assets/a8bc6c0c-428e-4cb3-9d26-9251964db42a" />
-
 A demo project is included in the repository to illustrate usage:
+
+<img width="1727" alt="Screenshot 2025-05-27 at 9 23 08 PM" src="https://github.com/user-attachments/assets/a8bc6c0c-428e-4cb3-9d26-9251964db42a" />
 
 ```bash
 git clone https://github.com/numegil/django-admin-groupby.git
