@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="django-admin-groupby",
-    version="0.1.0",
+    version="1.0.0",
     author="Alexei Gousev",
     author_email="numegil@gmail.com",
     description="A Django app that extends the admin interface with group-by functionality",
@@ -22,7 +22,7 @@ setup(
     packages=find_packages(exclude=["example", "example.*"]),
     include_package_data=True,
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Environment :: Web Environment",
         "Framework :: Django",
         "Framework :: Django :: 3.2",
