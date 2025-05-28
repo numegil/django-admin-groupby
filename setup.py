@@ -12,6 +12,13 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/numegil/django-admin-groupby",
+    project_urls={
+        "Bug Tracker": "https://github.com/numegil/django-admin-groupby/issues",
+        "Source Code": "https://github.com/numegil/django-admin-groupby",
+        "Documentation": "https://github.com/numegil/django-admin-groupby#readme",
+        "Changelog": "https://github.com/numegil/django-admin-groupby/blob/main/CHANGELOG.md",
+    },
+    keywords="django admin group-by groupby aggregate aggregation sum count average",
     packages=find_packages(exclude=["example", "example.*"]),
     include_package_data=True,
     classifiers=[
@@ -23,6 +30,8 @@ setup(
         "Framework :: Django :: 4.1",
         "Framework :: Django :: 4.2",
         "Framework :: Django :: 5.0",
+        "Framework :: Django :: 5.1",
+        "Framework :: Django :: 5.2",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
