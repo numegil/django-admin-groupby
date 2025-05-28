@@ -4,136 +4,136 @@
 {% block title %}{% if title %}{{ title }} | {% endif %}{{ site_title|default:_('Django site admin') }}{% endblock %}
 
 {% block extrastyle %}
-  {{ block.super }}
-  <style>
-    .grp-cell-filter-link {
-      color: #447e9b;
-      text-decoration: none;
-    }
-    .grp-cell-filter-link:hover {
-      text-decoration: underline;
-    }
-  </style>
+    {{ block.super }}
+    <style>
+        .grp-cell-filter-link {
+            color: #447e9b;
+            text-decoration: none;
+        }
+        .grp-cell-filter-link:hover {
+            text-decoration: underline;
+        }
+    </style>
 {% endblock %}
 
 {% block date_hierarchy %}
-  {% if cl.grouped_results %}
-    {# Hide date hierarchy when in grouped mode #}
-  {% else %}
-    {{ block.super }}
-  {% endif %}
+    {% if cl.grouped_results %}
+        {# Hide date hierarchy when in grouped mode #}
+    {% else %}
+        {{ block.super }}
+    {% endif %}
 {% endblock %}
 
 {% block result_list %}
-  {% if cl.grouped_results %}
-    <div class="results">
-      <table id="result_list">
-        <thead>
-          <tr>
-            {% for field_info in cl.groupby_field_info %}
-              <th scope="col" class="column-{{ field_info.field|slugify }}{% if field_info.sorted %} sorted{% endif %}">
-                {% if field_info.sortable %}
-                  {% if field_info.sorted %}
-                    <div class="sortoptions">
-                      <a href="{{ field_info.url_toggle }}" class="toggle {{ field_info.sort_direction }}" title="{% translate "Toggle sorting" %}"></a>
-                    </div>
-                  {% endif %}
-                  <div class="text">
-                    <a href="{{ field_info.url_toggle }}">{{ field_info.verbose_name }}</a>
-                  </div>
-                  <div class="clear"></div>
-                {% else %}
-                  <div class="text">{{ field_info.verbose_name }}</div>
-                {% endif %}
-              </th>
-            {% endfor %}
-            {% for agg in cl.aggregate_info %}
-              <th scope="col" class="column-{{ agg.field|slugify }}_{{ agg.operation|slugify }}{% if agg.sorted %} sorted{% endif %}">
-                {% if agg.sortable %}
-                  {% if agg.sorted %}
-                    <div class="sortoptions">
-                      <a href="{{ agg.url_toggle }}" class="toggle {{ agg.sort_direction }}" title="{% translate "Toggle sorting" %}"></a>
-                    </div>
-                  {% endif %}
-                  <div class="text">
-                    <a href="{{ agg.url_toggle }}">{{ agg.label }}</a>
-                  </div>
-                  <div class="clear"></div>
-                {% else %}
-                  <div class="text">{{ agg.label }}</div>
-                {% endif %}
-              </th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for result in cl.grouped_results %}
-            <tr class="{% cycle 'row1' 'row2' %}">
-              {% for field in cl.groupby_fields %}
-                {% if field in cl.boolean_fields %}
-                  <td class="field-boolean">
-                    <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
-                      {% if result|get_item:field %}
-                        <img src="{% static 'admin/img/icon-yes.svg' %}" alt="True">
-                      {% else %}
-                        <img src="{% static 'admin/img/icon-no.svg' %}" alt="False">
-                      {% endif %}
-                    </a>
-                  </td>
-                {% elif field in cl.fields_with_choices %}
-                  <td>
-                    <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
-                      {{ result|get_item:field|get_display:opts }}
-                    </a>
-                  </td>
-                {% else %}
-                  <td>
-                    <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
-                      {{ result|get_item:field|default:"None" }}
-                    </a>
-                  </td>
-                {% endif %}
-              {% endfor %}
-              
-              {% for agg in cl.aggregate_info %}
-                <td>
-                  {% if agg.operation == 'avg' %}
-                    {{ result|get_item:agg.key|floatformat:1 }}
-                  {% elif agg.operation == 'post_process' %}
-                    {{ result|get_item:agg.key }}
-                  {% else %}
-                    {{ result|get_item:agg.key }}
-                  {% endif %}
-                </td>
-              {% endfor %}
-            </tr>
-          {% endfor %}
-          <tr style="font-weight: bold;">
-            {% for field_name in cl.groupby_field_names %}
-              {% if forloop.first %}
-                <td>{% trans "Total" %}</td>
-              {% else %}
-                <td></td>
-              {% endif %}
-            {% endfor %}
-            {% for agg in cl.aggregate_info %}
-              <td>
-                {% if agg.operation == 'count' or agg.operation == 'sum' or agg.is_post_process %}
-                  {{ cl.totals|get_item:agg.key }}
-                {% endif %}
-              </td>
-            {% endfor %}
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    {{ block.super }}
-  {% endif %}
+    {% if cl.grouped_results %}
+        <div class="results">
+            <table id="result_list">
+                <thead>
+                    <tr>
+                        {% for field_info in cl.groupby_field_info %}
+                            <th scope="col" class="column-{{ field_info.field|slugify }}{% if field_info.sorted %} sorted{% endif %}">
+                                {% if field_info.sortable %}
+                                    {% if field_info.sorted %}
+                                        <div class="sortoptions">
+                                            <a href="{{ field_info.url_toggle }}" class="toggle {{ field_info.sort_direction }}" title="{% translate "Toggle sorting" %}"></a>
+                                        </div>
+                                    {% endif %}
+                                    <div class="text">
+                                        <a href="{{ field_info.url_toggle }}">{{ field_info.verbose_name }}</a>
+                                    </div>
+                                    <div class="clear"></div>
+                                {% else %}
+                                    <div class="text">{{ field_info.verbose_name }}</div>
+                                {% endif %}
+                            </th>
+                        {% endfor %}
+                        {% for agg in cl.aggregate_info %}
+                            <th scope="col" class="column-{{ agg.field|slugify }}_{{ agg.operation|slugify }}{% if agg.sorted %} sorted{% endif %}">
+                                {% if agg.sortable %}
+                                    {% if agg.sorted %}
+                                        <div class="sortoptions">
+                                            <a href="{{ agg.url_toggle }}" class="toggle {{ agg.sort_direction }}" title="{% translate "Toggle sorting" %}"></a>
+                                        </div>
+                                    {% endif %}
+                                    <div class="text">
+                                        <a href="{{ agg.url_toggle }}">{{ agg.label }}</a>
+                                    </div>
+                                    <div class="clear"></div>
+                                {% else %}
+                                    <div class="text">{{ agg.label }}</div>
+                                {% endif %}
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in cl.grouped_results %}
+                        <tr class="{% cycle 'row1' 'row2' %}">
+                            {% for field in cl.groupby_fields %}
+                                {% if field in cl.boolean_fields %}
+                                    <td class="field-boolean">
+                                        <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
+                                            {% if result|get_item:field %}
+                                                <img src="{% static 'admin/img/icon-yes.svg' %}" alt="True">
+                                            {% else %}
+                                                <img src="{% static 'admin/img/icon-no.svg' %}" alt="False">
+                                            {% endif %}
+                                        </a>
+                                    </td>
+                                {% elif field in cl.fields_with_choices %}
+                                    <td>
+                                        <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
+                                            {{ result|get_item:field|get_display:opts }}
+                                        </a>
+                                    </td>
+                                {% else %}
+                                    <td>
+                                        <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
+                                            {{ result|get_item:field|default:"None" }}
+                                        </a>
+                                    </td>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% for agg in cl.aggregate_info %}
+                                <td>
+                                    {% if agg.operation == 'avg' %}
+                                        {{ result|get_item:agg.key|floatformat:1 }}
+                                    {% elif agg.operation == 'post_process' %}
+                                        {{ result|get_item:agg.key }}
+                                    {% else %}
+                                        {{ result|get_item:agg.key }}
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                    <tr style="font-weight: bold;">
+                        {% for field_name in cl.groupby_field_names %}
+                            {% if forloop.first %}
+                                <td>{% trans "Total" %}</td>
+                            {% else %}
+                                <td></td>
+                            {% endif %}
+                        {% endfor %}
+                        {% for agg in cl.aggregate_info %}
+                            <td>
+                                {% if agg.operation == 'count' or agg.operation == 'sum' or agg.is_post_process %}
+                                    {{ cl.totals|get_item:agg.key }}
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        {{ block.super }}
+    {% endif %}
 {% endblock %}
 
 {% block pagination %}
-  {% if not cl.grouped_results %}
-    {{ block.super }}
-  {% endif %}
+    {% if not cl.grouped_results %}
+        {{ block.super }}
+    {% endif %}
 {% endblock %}
