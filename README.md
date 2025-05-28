@@ -73,6 +73,8 @@ class ProductAdmin(GroupByAdminMixin, admin.ModelAdmin):
 
 ## Demo
 
+<img width="1727" alt="Screenshot 2025-05-27 at 9 23 08 PM" src="https://github.com/user-attachments/assets/a8bc6c0c-428e-4cb3-9d26-9251964db42a" />
+
 A demo project is included in the repository to illustrate usage:
 
 ```bash
