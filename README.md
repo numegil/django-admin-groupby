@@ -42,11 +42,11 @@ from .models import Product
 
 @admin.register(Product)
 class ProductAdmin(GroupByAdminMixin, admin.ModelAdmin):
-    list_display = ('name', 'category', 'price', 'in_stock')
-    list_filter = ('category', 'in_stock')
+    # ... your existing admin stuff
 
     group_by_fields = ['category', 'in_stock']
 
+    # optional, defaults to just counts if nothing is specified.
     group_by_aggregates = {
         'id': {
             'count': Count('id', extra={'verbose_name': "Total Products"}),
