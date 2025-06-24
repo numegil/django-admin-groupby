@@ -95,12 +95,17 @@ class GroupByAdminMixin:
         for field in groupby_fields:
             value = group_values.get(field)
             
-            if isinstance(value, bool):
-                value = '1' if value else '0'
-                
             field_obj = self.model._meta.get_field(field)
             
-            if hasattr(field_obj, 'choices') and field_obj.choices or field_obj.get_internal_type() == 'BooleanField':
+            # Handle boolean fields
+            if field_obj.get_internal_type() == 'BooleanField':
+                if value is None:
+                    filter_params[f"{field}__isnull"] = 'True'
+                else:
+                    value = '1' if value else '0'
+                    filter_params[f"{field}__exact"] = value
+            # Handle choice fields
+            elif hasattr(field_obj, 'choices') and field_obj.choices:
                 filter_params[f"{field}__exact"] = value
             else:
                 filter_params[field] = value

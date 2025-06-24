@@ -73,11 +73,15 @@
                                 {% if field in cl.boolean_fields %}
                                     <td class="field-boolean">
                                         <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
-                                            {% if result|get_item:field %}
-                                                <img src="{% static 'admin/img/icon-yes.svg' %}" alt="True">
-                                            {% else %}
-                                                <img src="{% static 'admin/img/icon-no.svg' %}" alt="False">
-                                            {% endif %}
+                                            {% with field_value=result|get_item:field %}
+                                                {% if field_value is None %}
+                                                    <img src="{% static 'admin/img/icon-unknown.svg' %}" alt="None">
+                                                {% elif field_value %}
+                                                    <img src="{% static 'admin/img/icon-yes.svg' %}" alt="True">
+                                                {% else %}
+                                                    <img src="{% static 'admin/img/icon-no.svg' %}" alt="False">
+                                                {% endif %}
+                                            {% endwith %}
                                         </a>
                                     </td>
                                 {% elif field in cl.fields_with_choices %}

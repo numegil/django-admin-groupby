@@ -3,7 +3,7 @@ from django.db import models
 class Cat(models.Model):
     name = models.CharField(max_length=100)
     age = models.IntegerField()
-    is_vaccinated = models.BooleanField(default=False)
+    is_vaccinated = models.BooleanField(null=True, blank=True, default=None)
     weight = models.FloatField()
     
     COLOR_CHOICES = [
