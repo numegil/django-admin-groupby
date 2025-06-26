@@ -94,7 +94,15 @@
                                 {% else %}
                                     <td>
                                         <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
-                                            {{ result|get_item:actual_field|default:"None" }}
+                                            {% with display_key=actual_field|add:"_display" %}
+                                                {% with display_value=result|get_item:display_key %}
+                                                    {% if display_value %}
+                                                        {{ display_value }}
+                                                    {% else %}
+                                                        {{ result|get_item:actual_field|default:"None" }}
+                                                    {% endif %}
+                                                {% endwith %}
+                                            {% endwith %}
                                         </a>
                                     </td>
                                 {% endif %}

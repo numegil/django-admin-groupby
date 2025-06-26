@@ -13,6 +13,25 @@ def get_item(obj, key):
     return None
 
 @register.filter
+def get_display_value(result, field_info):
+    """Get the display value for a field, using formatted version if available."""
+    if isinstance(field_info, dict):
+        field = field_info.get('field', '')
+        actual_field = field_info.get('actual_field', field)
+    else:
+        field = field_info
+        actual_field = field
+    
+    # Check if this is a date field with a display value
+    if '__' in actual_field:
+        display_key = f"{actual_field}_display"
+        if display_key in result:
+            return result[display_key]
+    
+    # Otherwise return the regular value
+    return result.get(actual_field)
+
+@register.filter
 def get_display(value, model_opts):
     """Get the display value for a field choice."""
     if value is None:

@@ -101,6 +101,28 @@ class GroupByAdminMixin:
     def _build_date_annotation(self, field_name, date_part):
         """Build Django annotation for extracting date part."""
         return Extract(field_name, date_part)
+    
+    def _format_date_value(self, value, date_part):
+        """Format date values for display."""
+        if value is None:
+            return None
+            
+        if date_part == 'month':
+            # Convert month number to month name
+            import calendar
+            try:
+                return calendar.month_name[int(value)]
+            except (ValueError, IndexError):
+                return str(value)
+        elif date_part == 'quarter':
+            return f"Q{value}"
+        elif date_part == 'week':
+            return f"Week {value}"
+        elif date_part == 'day':
+            return f"Day {value}"
+        else:
+            # Year or other parts
+            return str(value)
         
     def get_filter_url_for_group(self, cl, group_values, groupby_fields):
         filter_params = {}
@@ -121,6 +143,15 @@ class GroupByAdminMixin:
             # Handle date fields with extraction
             if date_part and value is not None:
                 filter_params[f"{field_name}__{date_part}"] = value
+                
+                # For month/day/week filtering, also include the year if available
+                if date_part in ['month', 'day', 'week']:
+                    # Check if we have year data in the group
+                    year_field = f"{field_name}__year"
+                    if year_field in groupby_fields:
+                        year_value = group_values.get(f"{field_name}__year")
+                        if year_value:
+                            filter_params[f"{field_name}__year"] = year_value
             # Handle boolean fields
             elif field_obj.get_internal_type() == 'BooleanField':
                 if value is None:
@@ -305,6 +336,15 @@ class GroupByAdminMixin:
                     agg_key = f"{field}__{op_name}"
                     values = [pp_obj.func(obj) for obj in group_objects]
                     group_dict[agg_key] = self._apply_aggregation(values, pp_obj.aggregate)
+            
+            # Add formatted versions of date fields
+            for field_spec in groupby_fields:
+                field_name, date_part = self._parse_date_field(field_spec)
+                if date_part:
+                    annotation_name = f"{field_name}__{date_part}"
+                    raw_value = group_dict.get(annotation_name)
+                    formatted_value = self._format_date_value(raw_value, date_part)
+                    group_dict[f"{annotation_name}_display"] = formatted_value
             
             group_dict['_filter_url'] = self.get_filter_url_for_group(cl, group_dict, groupby_fields)
         
