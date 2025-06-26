@@ -160,6 +160,25 @@ class GroupByAdminMixin:
             return [GroupByFilter] + list(list_filter)
         return list_filter
 
+    def get_changelist_instance(self, request):
+        """Override to ensure date filters show 'Clear all filters' link."""
+        cl = super().get_changelist_instance(request)
+        
+        # Check if we have date filter parameters
+        has_date_filters = any(
+            '__' in param and param.split('__')[1] in ['year', 'month', 'day', 'week', 'quarter']
+            for param in request.GET if param not in ['groupby', 'sort', 'o', 'p', 'q']
+        )
+        
+        # If we have date filters, ensure the filters UI shows up
+        if has_date_filters:
+            # Need to have at least one filter spec for has_filters to be True
+            if cl.filter_specs:
+                cl.has_filters = True
+                cl.has_active_filters = True
+        
+        return cl
+    
     def changelist_view(self, request, extra_context=None):
         groupby_param = request.GET.get('groupby', '')
         if not groupby_param:
