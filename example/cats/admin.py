@@ -10,7 +10,7 @@ class CatAdmin(GroupByAdminMixin, admin.ModelAdmin):
     list_filter = ('is_vaccinated', 'color', 'breed')
     search_fields = ('name',)
     
-    group_by_fields = ['color', 'breed', 'is_vaccinated', 'adoption_date__year', 'adoption_date__month', 'adoption_date__quarter', 'adoption_date__week', 'adoption_date__day']
+    group_by_fields = ['color', 'breed', 'is_vaccinated', 'adoption_date__year', 'adoption_date__year_month', 'adoption_date__month', 'adoption_date__quarter', 'adoption_date__weekday']
     group_by_aggregates = {
         'id': {
             'count': Count('id', extra={'verbose_name': "Count"}),

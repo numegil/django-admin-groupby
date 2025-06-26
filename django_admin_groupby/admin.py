@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin.filters import SimpleListFilter
-from django.db.models import Count
-from django.db.models.functions import Extract
+from django.db.models import Count, Value
+from django.db.models.functions import Extract, Concat
 from django.template.response import TemplateResponse
 from django.utils.translation import gettext_lazy as _
 from django.utils.text import slugify
@@ -94,13 +94,29 @@ class GroupByAdminMixin:
         """Parse field__year syntax and return (field_name, date_part) or (field_spec, None)."""
         if '__' in field_spec:
             parts = field_spec.split('__')
-            if len(parts) == 2 and parts[1] in ['year', 'month', 'day', 'week', 'quarter']:
-                return parts[0], parts[1]
+            if len(parts) == 2:
+                date_parts = ['year', 'month', 'day', 'week', 'quarter', 'year_month', 'iso_week', 'weekday', 'hour']
+                if parts[1] in date_parts:
+                    return parts[0], parts[1]
         return field_spec, None
     
     def _build_date_annotation(self, field_name, date_part):
         """Build Django annotation for extracting date part."""
-        return Extract(field_name, date_part)
+        if date_part == 'year_month':
+            # Combine year and month with a hyphen
+            from django.db.models import CharField
+            from django.db.models.functions import Cast
+            return Concat(
+                Cast(Extract(field_name, 'year'), output_field=CharField()),
+                Value('-'),
+                Cast(Extract(field_name, 'month'), output_field=CharField())
+            )
+        elif date_part == 'iso_week':
+            return Extract(field_name, 'week')
+        elif date_part == 'weekday':
+            return Extract(field_name, 'week_day')
+        else:
+            return Extract(field_name, date_part)
     
     def _format_date_value(self, value, date_part):
         """Format date values for display."""
@@ -120,6 +136,27 @@ class GroupByAdminMixin:
             return f"Week {value}"
         elif date_part == 'day':
             return f"Day {value}"
+        elif date_part == 'year_month':
+            # Format as "YYYY-MM" to "Month YYYY"
+            try:
+                parts = str(value).split('-')
+                if len(parts) == 2:
+                    import calendar
+                    year = parts[0]
+                    month = int(parts[1])
+                    return f"{calendar.month_name[month]} {year}"
+            except:
+                pass
+            return str(value)
+        elif date_part == 'weekday':
+            # Convert weekday number to name (1=Sunday, 7=Saturday in Django)
+            weekdays = ['', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+            try:
+                return weekdays[int(value)]
+            except (ValueError, IndexError):
+                return str(value)
+        elif date_part == 'hour':
+            return f"{value}:00"
         else:
             # Year or other parts
             return str(value)
@@ -142,16 +179,26 @@ class GroupByAdminMixin:
             
             # Handle date fields with extraction
             if date_part and value is not None:
-                filter_params[f"{field_name}__{date_part}"] = value
-                
-                # For month/day/week filtering, also include the year if available
-                if date_part in ['month', 'day', 'week']:
-                    # Check if we have year data in the group
-                    year_field = f"{field_name}__year"
-                    if year_field in groupby_fields:
-                        year_value = group_values.get(f"{field_name}__year")
-                        if year_value:
-                            filter_params[f"{field_name}__year"] = year_value
+                if date_part == 'year_month':
+                    # Split year-month value and create separate filters
+                    try:
+                        parts = str(value).split('-')
+                        if len(parts) == 2:
+                            filter_params[f"{field_name}__year"] = parts[0]
+                            filter_params[f"{field_name}__month"] = parts[1]
+                    except:
+                        pass
+                else:
+                    filter_params[f"{field_name}__{date_part}"] = value
+                    
+                    # For month/day/week filtering, also include the year if available
+                    if date_part in ['month', 'day', 'week']:
+                        # Check if we have year data in the group
+                        year_field = f"{field_name}__year"
+                        if year_field in groupby_fields:
+                            year_value = group_values.get(f"{field_name}__year")
+                            if year_value:
+                                filter_params[f"{field_name}__year"] = year_value
             # Handle boolean fields
             elif field_obj.get_internal_type() == 'BooleanField':
                 if value is None:
@@ -196,9 +243,10 @@ class GroupByAdminMixin:
         cl = super().get_changelist_instance(request)
         
         # Check if we have date filter parameters
+        date_parts = ['year', 'month', 'day', 'week', 'quarter', 'year_month', 'iso_week', 'weekday', 'hour']
         date_filter_params = [
             param for param in request.GET 
-            if '__' in param and param.split('__')[1] in ['year', 'month', 'day', 'week', 'quarter']
+            if '__' in param and param.split('__')[1] in date_parts
             and param not in ['groupby', 'sort', 'o', 'p', 'q']
         ]
         
