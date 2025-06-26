@@ -8,6 +8,7 @@ It works by adding a "Group by" filter in the admin sidebar, allowing you to sel
 
 * **Group Data Directly in Admin:** Easily group by model fields to quickly identify patterns.
 * **Built-in Aggregations:** Perform counts, sums, averages and more including advanced custom aggregations.
+* **Date Grouping:** Group by year, month, quarter, week, day and more with smart date formatting.
 * **Custom Calculations:** Aggregate calculated fields with lambda functions that run after database queries.
 * **Compatible:** Integrates seamlessly with Django admin filters, search, and permissions.
 * **Efficient:** Performs aggregations server-side, suitable for large datasets.
@@ -44,7 +45,13 @@ from .models import Product
 class ProductAdmin(GroupByAdminMixin, admin.ModelAdmin):
     # ...
 
-    group_by_fields = ['category', 'in_stock']
+    group_by_fields = [
+        'category',
+        'in_stock',
+        'created_at__year',    # Date field grouping options:
+        'created_at__month',   # - year, month (includes year), quarter, week, day
+        'created_at__quarter', # - weekday (Mon-Sun), hour (for datetime fields)
+    ]
 
     # (optional, defaults to just counts if nothing is specified)
     group_by_aggregates = {
