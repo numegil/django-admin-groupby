@@ -165,17 +165,22 @@ class GroupByAdminMixin:
         cl = super().get_changelist_instance(request)
         
         # Check if we have date filter parameters
-        has_date_filters = any(
-            '__' in param and param.split('__')[1] in ['year', 'month', 'day', 'week', 'quarter']
-            for param in request.GET if param not in ['groupby', 'sort', 'o', 'p', 'q']
-        )
+        date_filter_params = [
+            param for param in request.GET 
+            if '__' in param and param.split('__')[1] in ['year', 'month', 'day', 'week', 'quarter']
+            and param not in ['groupby', 'sort', 'o', 'p', 'q']
+        ]
         
         # If we have date filters, ensure the filters UI shows up
-        if has_date_filters:
+        if date_filter_params:
             # Need to have at least one filter spec for has_filters to be True
             if cl.filter_specs:
                 cl.has_filters = True
                 cl.has_active_filters = True
+                
+                # Rebuild clear_all_filters_qs to include our date filter params
+                params_to_remove = list(cl.get_filters_params().keys()) + date_filter_params
+                cl.clear_all_filters_qs = cl.get_query_string(remove=params_to_remove)
         
         return cl
     
