@@ -70,10 +70,11 @@
                     {% for result in cl.grouped_results %}
                         <tr class="{% cycle 'row1' 'row2' %}">
                             {% for field in cl.groupby_fields %}
+                                {% with actual_field=field_mapping|get_item:field|default:field %}
                                 {% if field in cl.boolean_fields %}
                                     <td class="field-boolean">
                                         <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
-                                            {% with field_value=result|get_item:field %}
+                                            {% with field_value=result|get_item:actual_field %}
                                                 {% if field_value is None %}
                                                     <img src="{% static 'admin/img/icon-unknown.svg' %}" alt="None">
                                                 {% elif field_value %}
@@ -87,16 +88,17 @@
                                 {% elif field in cl.fields_with_choices %}
                                     <td>
                                         <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
-                                            {{ result|get_item:field|get_display:opts }}
+                                            {{ result|get_item:actual_field|get_display:opts }}
                                         </a>
                                     </td>
                                 {% else %}
                                     <td>
                                         <a href="{{ result|get_item:'_filter_url' }}" title="{% trans 'Filter by this value' %}" class="grp-cell-filter-link" style="font-weight: bold;">
-                                            {{ result|get_item:field|default:"None" }}
+                                            {{ result|get_item:actual_field|default:"None" }}
                                         </a>
                                     </td>
                                 {% endif %}
+                                {% endwith %}
                             {% endfor %}
                             
                             {% for agg in cl.aggregate_info %}

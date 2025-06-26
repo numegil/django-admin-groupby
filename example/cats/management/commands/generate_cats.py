@@ -1,4 +1,5 @@
 import random
+from datetime import date, timedelta
 from django.core.management.base import BaseCommand
 from cats.models import Cat
 
@@ -58,13 +59,19 @@ class Command(BaseCommand):
             color = random.choice(colors)
             breed = random.choice(breeds)
             
+            # Generate adoption date spread across 2020-2024
+            base_date = date(2020, 1, 1)
+            days_offset = random.randint(0, 365 * 5)
+            adoption_date = base_date + timedelta(days=days_offset)
+            
             cat = Cat.objects.create(
                 name=name,
                 age=age,
                 is_vaccinated=is_vaccinated,
                 weight=weight,
                 color=color,
-                breed=breed
+                breed=breed,
+                adoption_date=adoption_date
             )
             cats_created += 1
         

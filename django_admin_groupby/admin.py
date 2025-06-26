@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin.filters import SimpleListFilter
 from django.db.models import Count
+from django.db.models.functions import Extract
 from django.template.response import TemplateResponse
 from django.utils.translation import gettext_lazy as _
 from django.utils.text import slugify
@@ -88,27 +89,50 @@ class GroupByAdminMixin:
                 if clean_name == f"{field}__{op_name}" and isinstance(op_func, PostProcess):
                     return True
         return False
+    
+    def _parse_date_field(self, field_spec):
+        """Parse field__year syntax and return (field_name, date_part) or (field_spec, None)."""
+        if '__' in field_spec:
+            parts = field_spec.split('__')
+            if len(parts) == 2 and parts[1] in ['year', 'month', 'day', 'week', 'quarter']:
+                return parts[0], parts[1]
+        return field_spec, None
+    
+    def _build_date_annotation(self, field_name, date_part):
+        """Build Django annotation for extracting date part."""
+        return Extract(field_name, date_part)
         
     def get_filter_url_for_group(self, cl, group_values, groupby_fields):
         filter_params = {}
         
-        for field in groupby_fields:
-            value = group_values.get(field)
+        for field_spec in groupby_fields:
+            # Parse date field if needed
+            field_name, date_part = self._parse_date_field(field_spec)
             
-            field_obj = self.model._meta.get_field(field)
+            # Get the actual value from the group_values
+            if date_part:
+                value_key = f"{field_name}__{date_part}"
+                value = group_values.get(value_key)
+            else:
+                value = group_values.get(field_spec)
             
+            field_obj = self.model._meta.get_field(field_name)
+            
+            # Handle date fields with extraction
+            if date_part and value is not None:
+                filter_params[f"{field_name}__{date_part}"] = value
             # Handle boolean fields
-            if field_obj.get_internal_type() == 'BooleanField':
+            elif field_obj.get_internal_type() == 'BooleanField':
                 if value is None:
-                    filter_params[f"{field}__isnull"] = 'True'
+                    filter_params[f"{field_name}__isnull"] = 'True'
                 else:
                     value = '1' if value else '0'
-                    filter_params[f"{field}__exact"] = value
+                    filter_params[f"{field_name}__exact"] = value
             # Handle choice fields
             elif hasattr(field_obj, 'choices') and field_obj.choices:
-                filter_params[f"{field}__exact"] = value
+                filter_params[f"{field_name}__exact"] = value
             else:
-                filter_params[field] = value
+                filter_params[field_name] = value
             
         return cl.get_query_string(filter_params, remove=['groupby', 'sort'])
     
@@ -153,6 +177,25 @@ class GroupByAdminMixin:
         
         cl = self.get_changelist_instance(request)
         queryset = cl.get_queryset(request)
+        
+        # Process date fields and build annotations
+        date_annotations = {}
+        values_fields = []
+        
+        for field_spec in groupby_fields:
+            field_name, date_part = self._parse_date_field(field_spec)
+            if date_part:
+                # This is a date field with extraction
+                annotation_name = f"{field_name}__{date_part}"
+                date_annotations[annotation_name] = self._build_date_annotation(field_name, date_part)
+                values_fields.append(annotation_name)
+            else:
+                # Regular field
+                values_fields.append(field_spec)
+        
+        # Apply date annotations to queryset
+        if date_annotations:
+            queryset = queryset.annotate(**date_annotations)
         
         flat_aggregates = {}
         post_process_aggregates = {}
@@ -208,23 +251,31 @@ class GroupByAdminMixin:
                 
         if is_post_process_sort:
             # For post-process sorting, don't include it in the database query
-            grouped_qs = queryset.values(*groupby_fields).annotate(**flat_aggregates).order_by(*groupby_fields)
+            grouped_qs = queryset.values(*values_fields).annotate(**flat_aggregates).order_by(*values_fields)
         else:
             # For regular sorting, use the provided sort order
-            grouped_qs = queryset.values(*groupby_fields).annotate(**flat_aggregates).order_by(*sort_order)
+            grouped_qs = queryset.values(*values_fields).annotate(**flat_aggregates).order_by(*sort_order)
         
         result_objects = None
         if post_process_aggregates:
             result_objects = {}
             for group_values in grouped_qs:
-                filter_kwargs = {field: group_values[field] for field in groupby_fields}
+                filter_kwargs = {}
+                for field_spec in groupby_fields:
+                    field_name, date_part = self._parse_date_field(field_spec)
+                    if date_part:
+                        # Use the annotated field name for date fields
+                        annotation_name = f"{field_name}__{date_part}"
+                        filter_kwargs[f"{field_name}__{date_part}"] = group_values[annotation_name]
+                    else:
+                        filter_kwargs[field_spec] = group_values[field_spec]
                 group_objects = list(queryset.filter(**filter_kwargs))
-                group_key = tuple(group_values[field] for field in groupby_fields)
+                group_key = tuple(group_values[field] for field in values_fields)
                 result_objects[group_key] = group_objects
         
         for group_dict in grouped_qs:
             if post_process_aggregates:
-                group_key = tuple(group_dict[field] for field in groupby_fields)
+                group_key = tuple(group_dict[field] for field in values_fields)
                 group_objects = result_objects.get(group_key, [])
                 for (field, op_name), pp_obj in post_process_aggregates.items():
                     agg_key = f"{field}__{op_name}"
@@ -271,50 +322,56 @@ class GroupByAdminMixin:
         boolean_fields = []
         groupby_field_info = []
         
-        for field_name in groupby_fields:
+        for field_spec in groupby_fields:
+            field_name, date_part = self._parse_date_field(field_spec)
             field_obj = self.model._meta.get_field(field_name)
             
             if hasattr(field_obj, 'choices') and field_obj.choices:
-                fields_with_choices.append(field_name)
+                fields_with_choices.append(field_spec)
                 
             if field_obj.get_internal_type() == 'BooleanField':
-                boolean_fields.append(field_name)
+                boolean_fields.append(field_spec)
             
             verbose_name = None
-            if hasattr(field_obj, 'verbose_name') and field_obj.verbose_name:
+            if date_part:
+                # For date fields, create a descriptive name
+                base_verbose_name = str(field_obj.verbose_name) if hasattr(field_obj, 'verbose_name') and field_obj.verbose_name else field_name.replace('_', ' ')
+                verbose_name = f"{base_verbose_name} ({date_part.title()})"
+                groupby_field_names.append(verbose_name)
+            elif hasattr(field_obj, 'verbose_name') and field_obj.verbose_name:
                 verbose_name = str(field_obj.verbose_name)
                 groupby_field_names.append(verbose_name)
             else:
-                verbose_name = field_name.replace('_', ' ').title()
+                verbose_name = field_spec.replace('_', ' ').title()
                 groupby_field_names.append(verbose_name)
                 
             # Generate sorting URLs for this groupby field
             stripped_original_param = original_sort_param.replace('-', '') if original_sort_param else ''
-            is_current_sort = stripped_original_param == field_name
+            is_current_sort = stripped_original_param == field_spec
             is_descending = original_sort_param.startswith('-') if original_sort_param else False
             
             url_primary = cl.get_query_string({
-                'sort': field_name
+                'sort': field_spec
             })
             
             if is_current_sort:
                 if is_descending:
-                    toggle_sort_param = field_name
+                    toggle_sort_param = field_spec
                 else:
-                    toggle_sort_param = f"-{field_name}"
+                    toggle_sort_param = f"-{field_spec}"
             else:
-                toggle_sort_param = field_name
+                toggle_sort_param = field_spec
             
             url_toggle = cl.get_query_string({
                 'sort': toggle_sort_param
             })
             
             groupby_field_info.append({
-                'field': field_name,
+                'field': field_spec,
                 'verbose_name': verbose_name,
                 'sortable': True,
-                'sorted': sort_field == field_name,
-                'sort_direction': 'descending' if sort_direction == 'descending' and sort_field == field_name else 'ascending',
+                'sorted': sort_field == field_spec,
+                'sort_direction': 'descending' if sort_direction == 'descending' and sort_field == field_spec else 'ascending',
                 'url_primary': url_primary,
                 'url_toggle': url_toggle
             })
@@ -422,6 +479,11 @@ class GroupByAdminMixin:
             result_count=0
         )
         
+        # Create a mapping from field_spec to values_field for template usage
+        field_mapping = {}
+        for i, field_spec in enumerate(groupby_fields):
+            field_mapping[field_spec] = values_fields[i]
+        
         context = {
             **self.admin_site.each_context(request),
             'cl': cl_totals,
@@ -437,6 +499,7 @@ class GroupByAdminMixin:
             'model_admin': self,
             'app_label': self.model._meta.app_label,
             'opts': self.model._meta,
+            'field_mapping': field_mapping,
         }
         
         if extra_context:

@@ -5,6 +5,7 @@ class Cat(models.Model):
     age = models.IntegerField()
     is_vaccinated = models.BooleanField(null=True, blank=True, default=None)
     weight = models.FloatField()
+    adoption_date = models.DateField(null=True, blank=True)
     
     COLOR_CHOICES = [
         ('BLK', 'Black'),
